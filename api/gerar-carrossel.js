@@ -4,60 +4,38 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { mensagem, tema, nicho, objetivo } = req.body;
-
-    const pedido = mensagem || `
-Tema: ${tema || ""}
-Nicho: ${nicho || ""}
-Objetivo: ${objetivo || ""}
-`;
+    const { mensagem } = req.body;
 
     const prompt = `
-Você é o Carrosselo, uma IA especialista em carrosséis para Instagram.
+Crie uma imagem quadrada pronta para postar no Instagram.
 
-Crie um carrossel visual e estratégico com base no pedido do usuário:
+Tema do post:
+${mensagem}
 
-${pedido}
+Estilo visual:
+- design premium
+- fundo preto
+- detalhes em laranja
+- tipografia moderna
+- composição minimalista
+- visual de carrossel profissional
+- alta legibilidade
+- formato 1:1
+- pronto para publicar
 
-Retorne APENAS JSON válido, sem markdown, sem explicações fora do JSON.
-
-Formato obrigatório:
-{
-  "slides": [
-    {
-      "titulo": "Título curto do slide",
-      "texto": "Texto curto e claro do slide",
-      "direcaoVisual": "Direção visual objetiva para este slide"
-    }
-  ],
-  "legenda": "Legenda curta para o post",
-  "cta": "Chamada para ação"
-}
-
-Regras:
-- Gere exatamente 5 slides.
-- Use linguagem profissional, clara e direta.
-- Cada título deve ser forte e curto.
-- Cada texto deve ter no máximo 2 frases.
-- A direção visual deve orientar o design do slide.
-- Pense em um carrossel pronto para Instagram.
+A imagem deve parecer um slide de carrossel feito por designer.
 `;
 
-    const resposta = await fetch("https://api.openai.com/v1/chat/completions", {
+    const resposta = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7
+        model: "gpt-image-1",
+        prompt: prompt,
+        size: "1024x1024"
       })
     });
 
@@ -65,12 +43,12 @@ Regras:
 
     if (!resposta.ok) {
       return res.status(500).json({
-        erro: data.error?.message || "Erro ao gerar carrossel"
+        erro: data.error?.message || "Erro ao gerar imagem"
       });
     }
 
     return res.status(200).json({
-      resultado: data.choices[0].message.content
+      imagem: data.data[0].b64_json
     });
 
   } catch (erro) {
