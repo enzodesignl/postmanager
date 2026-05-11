@@ -36,16 +36,160 @@ textarea{width:100%;min-height:70px;max-height:180px;resize:vertical;border:0;ou
 <main class="main"><header class="topbar"><strong>Carrosselo Studio</strong><div class="status">Conectado à IA</div></header><section class="chat" id="chat"><div class="chat-inner" id="chatInner"><div class="welcome"><h1>O que vamos criar <span>hoje?</span></h1><p>Descreva o carrossel que você quer. Exemplo: “Crie um carrossel sobre identidade visual para pequenos negócios com objetivo de gerar autoridade”.</p></div><div class="suggestions"><div class="suggestion" data-prompt="Crie um carrossel sobre identidade visual para pequenos negócios, com objetivo de gerar autoridade."><small>Branding</small><p>Carrossel sobre identidade visual para pequenos negócios.</p></div><div class="suggestion" data-prompt="Crie um carrossel de vendas para social media, mostrando por que empresas precisam de conteúdo profissional."><small>Vendas</small><p>Carrossel para vender serviços de social media.</p></div><div class="suggestion" data-prompt="Crie um carrossel educativo para explicar a importância de ter um perfil organizado no Instagram."><small>Educação</small><p>Carrossel educativo sobre Instagram profissional.</p></div></div></div></section><section class="composer-wrap"><div class="composer"><textarea id="prompt" placeholder="Escreva aqui o carrossel que deseja criar..."></textarea><div class="composer-actions"><div class="options"><span class="chip">Instagram</span><span class="chip">5 slides</span><span class="chip">Visual estratégico</span></div><button class="send" id="sendBtn">Gerar</button></div></div></section></main>
 </div>
 <script>
-const chatInner=document.getElementById("chatInner");const promptInput=document.getElementById("prompt");const sendBtn=document.getElementById("sendBtn");const suggestions=document.querySelectorAll(".suggestion");
-suggestions.forEach(function(card){card.addEventListener("click",function(){promptInput.value=card.dataset.prompt;promptInput.focus();});});
-function addMessage(type,content){const msg=document.createElement("div");msg.className="message "+type;msg.innerHTML='<div class="avatar">'+(type==="user"?"você":"c")+'</div><div class="bubble">'+content+'</div>';chatInner.appendChild(msg);document.getElementById("chat").scrollTop=document.getElementById("chat").scrollHeight;return msg;}
-function escapeHTML(text){return String(text).replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]);});}
-function renderSlides(slides){return '<div><strong>Carrossel gerado</strong><div class="carousel-result">'+slides.map(function(slide,index){const dark=index%2===0?" dark":"";return '<article class="slide'+dark+'"><div><small>Slide '+(index+1)+'</small><h3>'+escapeHTML(slide.titulo||"")+'</h3><p>'+escapeHTML(slide.texto||"")+'</p></div><b>'+escapeHTML(slide.direcaoVisual||"")+'</b></article>';}).join("")+'</div></div>';}
-async function gerar(){const prompt=promptInput.value.trim();if(!prompt)return;addMessage("user",escapeHTML(prompt));promptInput.value="";sendBtn.disabled=true;sendBtn.textContent="Gerando...";const loading=addMessage("assistant","Pensando na melhor estrutura para o seu carrossel...");try{const resposta=await fetch("/api/gerar-carrossel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mensagem:prompt})});const data=await resposta.json();if(data.erro){loading.querySelector(".bubble").innerHTML="<strong>Erro</strong><br>"+escapeHTML(data.erro);return;}if(data.imagem){
-loading.querySelector(".bubble").innerHTML='<strong>Imagem gerada</strong><br><br><img src="data:image/png;base64,'+data.imagem+'" style="width:100%;border-radius:22px;margin-top:14px;"><br><br><a download="carrosselo-post.png" href="data:image/png;base64,'+data.imagem+'" style="display:inline-flex;margin-top:12px;background:#ff6a00;color:white;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:900;">Baixar imagem</a>';
-return;
-}}catch(error){loading.querySelector(".bubble").innerHTML="<strong>Erro</strong><br>Não foi possível conectar à IA.";}finally{sendBtn.disabled=false;sendBtn.textContent="Gerar";}}
-sendBtn.addEventListener("click",gerar);promptInput.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();gerar();}});
+const chatInner = document.getElementById("chatInner");
+const promptInput = document.getElementById("prompt");
+const sendBtn = document.getElementById("sendBtn");
+const suggestions = document.querySelectorAll(".suggestion");
+
+suggestions.forEach(function(card){
+  card.addEventListener("click", function(){
+    promptInput.value = card.dataset.prompt;
+    promptInput.focus();
+  });
+});
+
+function addMessage(type, content){
+  const msg = document.createElement("div");
+  msg.className = "message " + type;
+
+  msg.innerHTML = `
+    <div class="avatar">${type === "user" ? "você" : "c"}</div>
+    <div class="bubble">${content}</div>
+  `;
+
+  chatInner.appendChild(msg);
+  document.getElementById("chat").scrollTop = document.getElementById("chat").scrollHeight;
+
+  return msg;
+}
+
+function escapeHTML(text){
+  return String(text).replace(/[&<>"']/g, function(m){
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    }[m];
+  });
+}
+
+async function gerar(){
+  const prompt = promptInput.value.trim();
+
+  if(!prompt) return;
+
+  addMessage("user", escapeHTML(prompt));
+
+  promptInput.value = "";
+  sendBtn.disabled = true;
+  sendBtn.textContent = "Gerando...";
+
+  const loading = addMessage(
+    "assistant",
+    "Criando o roteiro e gerando os slides do seu carrossel..."
+  );
+
+  try {
+    const resposta = await fetch("/api/gerar-carrossel", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        mensagem: prompt
+      })
+    });
+
+    const data = await resposta.json();
+
+    if(data.erro){
+      loading.querySelector(".bubble").innerHTML =
+        "<strong>Erro</strong><br>" + escapeHTML(data.erro);
+      return;
+    }
+
+    if(data.imagens){
+      loading.querySelector(".bubble").innerHTML = `
+        <div style="display:grid;gap:22px;">
+          <strong style="font-size:20px;">Carrossel gerado</strong>
+
+          ${data.imagens.map((slide, index) => `
+            <div style="
+              background:#111;
+              padding:18px;
+              border-radius:24px;
+            ">
+              <h3 style="
+                color:white;
+                margin-bottom:6px;
+                font-size:22px;
+              ">
+                Slide ${index + 1}
+              </h3>
+
+              <p style="
+                color:#d7d7d7;
+                margin-bottom:14px;
+                line-height:1.5;
+              ">
+                ${escapeHTML(slide.titulo || "")}
+              </p>
+
+              <img
+                src="data:image/png;base64,${slide.imagem}"
+                style="
+                  width:100%;
+                  border-radius:18px;
+                  display:block;
+                "
+              />
+
+              <a
+                download="carrosselo-slide-${index + 1}.png"
+                href="data:image/png;base64,${slide.imagem}"
+                style="
+                  display:inline-flex;
+                  margin-top:14px;
+                  background:#ff6a00;
+                  color:white;
+                  padding:12px 18px;
+                  border-radius:999px;
+                  text-decoration:none;
+                  font-weight:900;
+                "
+              >
+                Baixar slide ${index + 1}
+              </a>
+            </div>
+          `).join("")}
+        </div>
+      `;
+
+      return;
+    }
+
+    loading.querySelector(".bubble").innerHTML =
+      "<strong>Erro</strong><br>A API respondeu, mas não retornou imagens.";
+
+  } catch(error) {
+    loading.querySelector(".bubble").innerHTML =
+      "<strong>Erro</strong><br>Não foi possível conectar à IA.";
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = "Gerar";
+  }
+}
+
+sendBtn.addEventListener("click", gerar);
+
+promptInput.addEventListener("keydown", function(e){
+  if(e.key === "Enter" && !e.shiftKey){
+    e.preventDefault();
+    gerar();
+  }
+});
 </script>
 </body>
 </html>
